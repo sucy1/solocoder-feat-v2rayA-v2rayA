@@ -412,6 +412,9 @@ func run() (err error) {
 	} else {
 		log.Info("the core was not running the last time v2rayA exited")
 	}
+
+	service.StartStatsCollector()
+
 	//w := configure.GetConnectedServers()
 	//log.Println(err, ", which:", w)
 	//_ = configure.ClearConnected()
@@ -431,6 +434,7 @@ func run() (err error) {
 		log.Fatal("run: %v", err)
 	}
 	fmt.Println("Quitting...")
+	service.StopStatsCollector()
 	v2ray.ProcessManager.CheckAndStopTransparentProxy(nil)
 	v2ray.ProcessManager.Stop(false)
 	_ = db.Close()

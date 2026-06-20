@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -192,6 +194,24 @@ func loadStatsFromDisk() error {
 	return nil
 }
 
+func parseNodeKey(key string) (nodeType configure.TouchType, subID int, nodeID int, ok bool) {
+	parts := strings.Split(key, "-")
+	if len(parts) < 3 {
+		return "", 0, 0, false
+	}
+	nodeType = configure.TouchType(strings.Join(parts[:len(parts)-2], "-"))
+	var err error
+	subID, err = strconv.Atoi(parts[len(parts)-2])
+	if err != nil {
+		return "", 0, 0, false
+	}
+	nodeID, err = strconv.Atoi(parts[len(parts)-1])
+	if err != nil {
+		return "", 0, 0, false
+	}
+	return nodeType, subID, nodeID, true
+}
+
 func saveStatsToDisk() error {
 	statsHistoryMu.RLock()
 	defer statsHistoryMu.RUnlock()
@@ -210,10 +230,8 @@ func saveStatsToDisk() error {
 			continue
 		}
 
-		var nodeType configure.TouchType
-		var subID, nodeID int
-		_, err := fmt.Sscanf(key, "%s-%d-%d", &nodeType, &subID, &nodeID)
-		if err != nil {
+		nodeType, subID, nodeID, ok := parseNodeKey(key)
+		if !ok {
 			history.mu.RUnlock()
 			continue
 		}
@@ -341,6 +359,22 @@ func collectConnectionStats() {
 		return
 	}
 
+	totalConns := 0
+	for _, protoPorts := range portMap {
+		for _, sockets := range protoPorts {
+			for _, sock := range sockets {
+				if sock.State == netstat.Established {
+					totalConns++
+				}
+			}
+		}
+	}
+
+	perNodeConns := 0
+	if css.Len() > 0 {
+		perNodeConns = totalConns / css.Len()
+	}
+
 	now := time.Now()
 	statsHistoryMu.Lock()
 	defer statsHistoryMu.Unlock()
@@ -363,31 +397,11 @@ func collectConnectionStats() {
 			}
 		}
 
-		connCount := 0
-		for _, protoPorts := range portMap {
-			for _, sockets := range protoPorts {
-				for _, sock := range sockets {
-					if sock.State == netstat.Established {
-						connCount++
-					}
-				}
-			}
-		}
-
-		connCount = connCount / css.Len()
-
 		point := &statsDataPoint{
-			timestamp:   now,
-			connections: connCount,
-		}
-
-		if len(history.dataPoints) > 0 {
-			lastPoint := history.dataPoints[len(history.dataPoints)-1]
-			interval := now.Sub(lastPoint.timestamp).Seconds()
-			if interval > 0 {
-				point.uploadBytes = history.lastUpload
-				point.downloadBytes = history.lastDownload
-			}
+			timestamp:     now,
+			connections:   perNodeConns,
+			uploadBytes:   history.lastUpload,
+			downloadBytes: history.lastDownload,
 		}
 
 		history.dataPoints = append(history.dataPoints, point)
