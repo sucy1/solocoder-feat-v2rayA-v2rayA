@@ -143,10 +143,34 @@ func ValidateRemoteApiKey(apiKey string) bool {
 		return false
 	}
 
-	hash := sha256.Sum256([]byte(apiKey))
-	keyHash := sha256.Sum256([]byte(setting.RemoteApiKey))
+	return apiKey == setting.RemoteApiKey
+}
 
-	return hex.EncodeToString(hash[:]) == hex.EncodeToString(keyHash[:])
+func GetRemoteApiKeyFromRequest(getHeader func(string) string, getQuery func(string) string, getForm func(string) string) string {
+	headerKeys := []string{"X-API-Key", "Api-Key", "api-key", "X-APIKEY", "apikey"}
+	queryKeys := []string{"apiKey", "api_key", "apikey", "key", "api-key"}
+
+	for _, k := range headerKeys {
+		if v := getHeader(k); v != "" {
+			return v
+		}
+	}
+
+	for _, k := range queryKeys {
+		if v := getQuery(k); v != "" {
+			return v
+		}
+	}
+
+	if getForm != nil {
+		for _, k := range queryKeys {
+			if v := getForm(k); v != "" {
+				return v
+			}
+		}
+	}
+
+	return ""
 }
 
 func GetAvailableProxyModes() []map[string]interface{} {

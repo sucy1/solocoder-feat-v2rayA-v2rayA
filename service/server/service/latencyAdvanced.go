@@ -147,7 +147,12 @@ func TestAllLatencies(config *LatencyTestConfig, testType string, useCache bool)
 		return results, nil
 	}
 
-	sem := make(chan struct{}, config.Concurrency)
+	effectiveConcurrency := config.Concurrency
+	if len(toTest) < effectiveConcurrency {
+		effectiveConcurrency = len(toTest)
+	}
+
+	sem := make(chan struct{}, effectiveConcurrency)
 	wg := sync.WaitGroup{}
 	wg.Add(len(toTest))
 
@@ -178,7 +183,7 @@ func TestAllLatencies(config *LatencyTestConfig, testType string, useCache bool)
 			httpWhiches = append(httpWhiches, &cp)
 		}
 
-		_, err := TestHttpLatency(httpWhiches, config.Timeout, config.Concurrency, false, config.TestURL)
+		_, err := TestHttpLatency(httpWhiches, config.Timeout, effectiveConcurrency, false, config.TestURL)
 		if err != nil {
 			return nil, err
 		}

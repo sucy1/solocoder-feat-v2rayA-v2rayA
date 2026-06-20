@@ -43,10 +43,11 @@ func GetAvailableProxyModes(ctx *gin.Context) {
 }
 
 func PostRemoteSwitchProxyMode(ctx *gin.Context) {
-	apiKey := ctx.GetHeader("X-API-Key")
-	if apiKey == "" {
-		apiKey = ctx.Query("apiKey")
-	}
+	apiKey := service.GetRemoteApiKeyFromRequest(
+		ctx.GetHeader,
+		ctx.Query,
+		ctx.PostForm,
+	)
 
 	if !service.ValidateRemoteApiKey(apiKey) {
 		common.Response(ctx, common.UNAUTHORIZED, "invalid API key")
@@ -58,8 +59,10 @@ func PostRemoteSwitchProxyMode(ctx *gin.Context) {
 	}
 	err := ctx.ShouldBindJSON(&data)
 	if err != nil {
-		common.ResponseError(ctx, logError("bad request"))
-		return
+		if err := ctx.ShouldBind(&data); err != nil {
+			common.ResponseError(ctx, logError("bad request"))
+			return
+		}
 	}
 
 	mode := service.ProxyMode(data.Mode)

@@ -198,15 +198,76 @@ func ConvertVisualToRoutingA(config *VisualRoutingConfig) string {
 	return sb.String()
 }
 
+type v2rayRoutingRule struct {
+	Type        string   `json:"type"`
+	OutboundTag string   `json:"outboundTag,omitempty"`
+	Domain      []string `json:"domain,omitempty"`
+	IP          []string `json:"ip,omitempty"`
+	Port        string   `json:"port,omitempty"`
+	SourcePort  string   `json:"sourcePort,omitempty"`
+	Network     string   `json:"network,omitempty"`
+	Protocol    []string `json:"protocol,omitempty"`
+	Source      []string `json:"source,omitempty"`
+}
+
+type v2rayRoutingConfig struct {
+	DomainStrategy string             `json:"domainStrategy"`
+	Rules          []v2rayRoutingRule `json:"rules"`
+}
+
 func ConvertVisualToJSON(config *VisualRoutingConfig) (string, error) {
-	routingA := ConvertVisualToRoutingA(config)
-	parsed, err := RoutingA.Parse(routingA)
-	if err != nil {
-		return "", err
+	rules := make([]v2rayRoutingRule, 0, len(config.Rules))
+
+	for _, rule := range config.Rules {
+		if !rule.Enabled {
+			continue
+		}
+
+		vRule := v2rayRoutingRule{
+			Type:        "field",
+			OutboundTag: rule.Outbound,
+		}
+
+		switch rule.MatchType {
+		case "domain":
+			vRule.Domain = rule.Values
+		case "geosite":
+			for _, v := range rule.Values {
+				vRule.Domain = append(vRule.Domain, "geosite:"+v)
+			}
+		case "ip":
+			vRule.IP = rule.Values
+		case "geoip":
+			for _, v := range rule.Values {
+				vRule.IP = append(vRule.IP, "geoip:"+v)
+			}
+		case "port":
+			if len(rule.Values) > 0 {
+				vRule.Port = strings.Join(rule.Values, ",")
+			}
+		case "sourcePort":
+			if len(rule.Values) > 0 {
+				vRule.SourcePort = strings.Join(rule.Values, ",")
+			}
+		case "network":
+			if len(rule.Values) > 0 {
+				vRule.Network = rule.Values[0]
+			}
+		case "protocol":
+			vRule.Protocol = rule.Values
+		case "source":
+			vRule.Source = rule.Values
+		}
+
+		rules = append(rules, vRule)
 	}
 
-	v2rayRouting := parsed.ToV2RayRouting()
-	jsonBytes, err := json.MarshalIndent(v2rayRouting, "", "  ")
+	routingConfig := v2rayRoutingConfig{
+		DomainStrategy: "AsIs",
+		Rules:          rules,
+	}
+
+	jsonBytes, err := json.MarshalIndent(routingConfig, "", "  ")
 	if err != nil {
 		return "", err
 	}

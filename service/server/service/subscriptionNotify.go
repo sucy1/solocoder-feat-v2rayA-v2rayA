@@ -119,7 +119,7 @@ func (m *SubscriptionNotifyManager) Restart() {
 func (m *SubscriptionNotifyManager) checkAndUpdateSubscriptions() {
 	subs := configure.GetSubscriptions()
 
-	for i, sub := range subs {
+	for i := range subs {
 		event := m.updateSubscription(i)
 		if event != nil {
 			select {
