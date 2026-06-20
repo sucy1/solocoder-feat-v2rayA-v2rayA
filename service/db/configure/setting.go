@@ -14,6 +14,8 @@ type Setting struct {
 	GFWListAutoUpdateIntervalHour      int             `json:"pacAutoUpdateIntervalHour"`
 	SubscriptionAutoUpdateMode         AutoUpdateMode  `json:"subscriptionAutoUpdateMode"`
 	SubscriptionAutoUpdateIntervalHour int             `json:"subscriptionAutoUpdateIntervalHour"`
+	SubscriptionNotifyEnabled          bool            `json:"subscriptionNotifyEnabled"`
+	SubscriptionNotifyIntervalHour     int             `json:"subscriptionNotifyIntervalHour"`
 	TcpFastOpen                        DefaultYesNo    `json:"tcpFastOpen"`
 	MuxOn                              DefaultYesNo    `json:"muxOn"`
 	Mux                                int             `json:"mux"`
@@ -34,6 +36,7 @@ type Setting struct {
 	TunExcludeProcesses                string          `json:"tunExcludeProcesses"`
 	SsBackend                          string          `json:"ssBackend"`
 	TrojanBackend                      string          `json:"trojanBackend"`
+	RemoteApiKey                       string          `json:"remoteApiKey"`
 }
 
 func NewSetting() (setting *Setting) {
@@ -45,6 +48,8 @@ func NewSetting() (setting *Setting) {
 		GFWListAutoUpdateIntervalHour:      0,
 		SubscriptionAutoUpdateMode:         NotAutoUpdate,
 		SubscriptionAutoUpdateIntervalHour: 0,
+		SubscriptionNotifyEnabled:          false,
+		SubscriptionNotifyIntervalHour:     6,
 		TcpFastOpen:                        Default,
 		MuxOn:                              No,
 		Mux:                                8,
@@ -55,6 +60,7 @@ func NewSetting() (setting *Setting) {
 		TransparentType:                    TransparentRedirect,
 		TproxyExcludedInterfaces:           "docker*,veth*,wg*,ppp*,br-*",
 		TunAutoRoute:                       true,
+		RemoteApiKey:                       "",
 	}
 }
 
