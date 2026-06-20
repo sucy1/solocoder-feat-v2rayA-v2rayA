@@ -1,0 +1,47 @@
+name: Test Source of v2rayA
+
+on:
+  push:
+    branches:
+      - main
+      - dependabot/*
+    paths:
+      - "**/*.go"
+      - "go.mod"
+      - "go.sum"
+      - "gui/**"
+      - ".github/workflows/*.yml"
+      - "install/windows-inno/**"
+
+jobs:
+  Build_v2rayA_Web:
+    uses: ./.github/workflows/_build_web.yml
+
+  Compute_Version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.prep.outputs.VERSION }}
+    steps:
+    - uses: actions/checkout@v6
+      with:
+        fetch-depth: 0
+    - name: Compute Version
+      id: prep
+      run: |
+        date=$(git log -1 --format="%cd" --date=short | sed s/-//g)
+        count=$(git rev-list --count HEAD)
+        commit=$(git rev-parse --short HEAD)
+        version="unstable-$date.r${count}.$commit"
+        echo "VERSION=$version" >> $GITHUB_OUTPUT
+
+  Build_v2rayA_Binaries:
+    needs: [Build_v2rayA_Web, Compute_Version]
+    uses: ./.github/workflows/_build_binaries.yml
+    with:
+      version: ${{ needs.Compute_Version.outputs.version }}
+
+  Build_Windows_Installer:
+    needs: [Build_v2rayA_Binaries, Compute_Version]
+    uses: ./.github/workflows/_build_windows_installer.yml
+    with:
+      version: ${{ needs.Compute_Version.outputs.version }}
